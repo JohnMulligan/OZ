@@ -141,6 +141,10 @@ def zotero_format_items(items):
 			except:
 				pass
 			try:
+				i['linkmode']=item['data']['linkMode']
+			except:
+				i['linkmode']=''
+			try:
 				i['url']=item['data']['url']
 			except:
 				pass
