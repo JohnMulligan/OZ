@@ -38,8 +38,6 @@ def zotero_get_group_items(get_all=False):
 		response=requests.get(this_url,params=params)
 		headers=response.headers
 		j=json.loads(response.text)
-		'''for i in j:
-			print(i['key'])'''
 		if len(j)>0:
 			all_results += j
 			start+=len(j)
@@ -68,9 +66,7 @@ def zotero_get_children(item_ids):
 			headers=response.headers
 			try:
 				j=json.loads(response.text)
-			
-				'''for i in j:
-					print(i['key'])'''
+
 				if len(j)>0:
 					children.append(j)
 					start+=len(j)

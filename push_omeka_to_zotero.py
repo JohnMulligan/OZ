@@ -24,7 +24,8 @@ property_map={
 'date':['dcterms:date',"numeric:timestamp"],
 'authors':['bibo:authorList','literal'],
 'citation':['dcterms:bibliographicCitation','literal'],
-'parentItem':['dcterms:isPartOf','Resource'],
+'parentItem':['dcterms:isPartOf','resource'],
+'childItem':['dcterms:hasPart','resource'],
 'note':['acm5air:note','literal']
 }
 
@@ -43,83 +44,73 @@ parentOf_property_term='dcterms:hasPart'
 childOf_property_term='dcterms:isPartOf'
 
 
-
+id_map={}
 for item in zotero_items_formatted:
 	print(item)
 	item_type=item['item_type']
 	item_class=class_map[item_type]
 	item_properties=[]
 	meta_properties=['modified','item_type','parentItem','downloadlink']
-	for property in item:
-		if property not in meta_properties:
-			if type(item[property])==list:
+	zotero_id=item['zotero_id']
+	for prop in item:
+		if prop not in meta_properties:
+			prop_term,prop_type=property_map[prop]
+			if type(item[prop])==list:
 				this_prop=[]
-				for p in item[property]:
+				for p in item[prop]:
+					
 					this_prop.append({
-							'term':property_map[property][0],
-							'type':property_map[property][1],
+							'term':prop_term,
+							'type':prop_type,
 							'value':p
 						})
 				item_properties.append(this_prop)
 			else:
 				item_properties.append([{
-						'term':property_map[property][0],
-						'type':property_map[property][1],
-						'value':item[property]
+						'term':prop_term,
+						'type':prop_type,
+						'value':item[prop]
 					}])
-		
-	O.create_item(item_properties,item_class)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#zotero returns timestamps in the format "2019-08-14T15:04:07Z"
-#omeka returns them in the format "2021-01-13T20:18:37+00:00"
-#and right now, my omeka and zotero api's are on the same clock, so i'm going to ignore the timezone question
-def datetime_reducer(dt):
-	formatted_date=datetime.datetime.strptime(re.search("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}",dt).group(0),'%Y-%m-%dT%H:%M:%S')
-	return(formatted_date)
 	
-omeka_class_term='bibo:Note'
-omeka_zotero_id_property_term='bibo:identifier'
-parentOf_property_term='dcterms:hasPart'
-childOf_property_term='dcterms:isPartOf'
+	omeka_id=O.create_item(item_properties,item_class)
+	id_map[zotero_id]=omeka_id
+	
+#now create links
+'''for item in zotero_items_formatted:
+	
+	if 'parentItem' in item.keys():
+		
+		try:
+			parent_omeka_id=id_map[item['parentItem']]
+			self_omeka_id=id_map[item['zotero_id']]
+		
+			prop_term,prop_type=property_map['parentItem']
+		
+			child_properties=[{'term':prop_term,'type':prop_type,'value':parent_omeka_id}]
+			print(child_properties)
+		except:
+			pass
+		O.update_item(child_properties,self_omeka_id)
+		
+		term,type=property_map['childItem']
+		
+		parent_properties=[{'term':term,'type':type,'value':self_omeka_id}]
+		
+		O.update_item(parent_properties,parent_omeka_id)'''
+		
+		
+	
+	
 
 
-#get omeka items that:
-#A) are of class "omeka_class_term"
-#B) have a value for property "omeka_zotero_id_property_term"
 
-omeka_class_id = O.basic_search('resource_classes',{'term':omeka_class_term},get_all=False)[0]['o:id']
-omeka_zotero_id_property_id = O.basic_search('properties',{'term':omeka_zotero_id_property_term},get_all=False)[0]['o:id']
-omeka_zotero_items=O.advanced_search(resource_type='items',advanced_args=[{'property_id':omeka_zotero_id_property_id,'operator':'ex'}],get_all=True)
 
-#now reduce these items to some basic data we need for comparing with the zotero Library
-omeka_zotero_items_formatted=[]
-for i in omeka_zotero_items:
-	item={}
-	item['zotero_id']=i[omeka_zotero_id_property_term][0]['@value']
-	item['modified']=datetime_reducer(i['o:modified']['@value'])
-	item['omeka_id']=i['o:id']
-	item['resource_class_id']=i['o:resource_class']['o:id']
-	omeka_zotero_items_formatted.append(item)
 
-for item in omeka_zotero_items_formatted:
-	print(item['zotero_id'],item['modified'],item['resource_class_id'])
 
-print("found %d zotero items in omeka" %len(omeka_zotero_items))
+
+
+
+
+
+
+

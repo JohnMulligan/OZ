@@ -34,42 +34,45 @@ def build_url(this_base_url, path='', args_dict={}):
 ## {term:'bibo:Note'}  OR, if coming from advanced search
 ## {'property[0][property]': 98, 'property[0][type]': 'ex', 'property[0][joiner]': 'and'}
 ## optional get_all parameter, if set to True, will fetch all results using Omeka API pagination functionality
-def omeka_get(path,args_dict,get_all=False):
+def omeka_get(api_path,args_dict,retrieve_all=False):
 	page=1
 	
 	all_results=[]
 	
 	while True:
 		args_dict['page']=page
-		this_url=build_url(base_url,path,args_dict)
-		#print(this_url)
+		this_url=build_url(base_url,api_path,args_dict)
 		response=requests.get(this_url,params=omeka_credentials)
 		headers=response.headers
 		j= json.loads(response.text)
-		if len(j)>0:
+		if type(j)==dict:
+			j=[j]
+		if len(j)==1 and page==1:
+			all_results=j
+			break
+		elif len(j)>0:
 			all_results += j
 			page+=1
 		else:
 			break
-		
-		if get_all==False:
+		if retrieve_all==False:
 			break
-	
 	return all_results
 
 #retrieves json object for omeka classes,properties,or templates based on search parameters
 #accepts basic key/value params on these native resources, e.g. ('resource_classes',{'term':'bibo:Note'})
 #super simple but a little inflexible
 #right now my searches are only working with equivalencies between key/value pairs
-def basic_search(resource_type,args_dict,get_all=True):
-	j=omeka_get(resource_type,args_dict,get_all)
+def basic_search(resource_type,args_dict={},retrieve_all=True):
+	#print('searching',resource_type,args_dict)
+	j=omeka_get(resource_type,args_dict,retrieve_all)
 	return j
 
 
 #advanced search args allow for some clever filters
 #Right now it's super helpful for only grabbing items that have a specific property, which keeps me from having to iterate over all items looking for a value there
 #e.g. advanced_args=[{'property_id':98,'operator':'ex'}]
-def advanced_search(resource_type=None,args_dict={},advanced_args=[],get_all=True):
+def advanced_search(resource_type=None,args_dict={},advanced_args=[],retrieve_all=True):
 	
 	p=0
 	
@@ -87,66 +90,124 @@ def advanced_search(resource_type=None,args_dict={},advanced_args=[],get_all=Tru
 		p+=1
 	
 	#print(args_dict)
-	j=omeka_get(resource_type,args_dict,get_all)
+	j=omeka_get(resource_type,args_dict,retrieve_all)
 	
 	return j
+
+
+
+##"properties" data is key/value pairs, where the key is always a 
+## [{'term': 'bibo:identifier', 'type': 'literal', 'value': '8W2R7WF5'}]
+def update_item(properties,item_id):
+	print(properties,item_id)
+	item_data=basic_search('items',args_dict={'id':item_id},retrieve_all=False)[0]
+	'''print('----------')
+	print(item_data)
+	print('---------')'''
+	new_properties_data=get_property_data(properties)
+	headers = {
+	'Content-type': 'application/json'
+	}
+	this_url=build_url(base_url,'items',{'id':item_id})
+	d=json.dumps(new_properties_data)
+	print(this_url)
+	json.loads(d)
+	print(omeka_credentials)
+	#print(d)
+	response = requests.patch(this_url, params=omeka_credentials, data=d, headers=headers)
+	print(response)
+
+
+
+def format_property_data(prop_type,prop_id,prop_value):
 	
+	#print(prop_type,prop_id,prop_value)
+	if prop_type=='uri':
+		prop_data={
+			"type":prop_type,
+			"property_id":prop_id,
+			"@id":prop_value
+		}
+	elif prop_type=='literal' or 'numeric' in prop_type:
+		prop_data={
+			"type":prop_type,
+			"property_id":prop_id,
+			"@value":prop_value
+		}
+	elif prop_type=='resource':
+		prop_data={
+			"type":prop_type,
+			"property_id":prop_id,
+			"value_resource_id":prop_value
+		}
+	return prop_data
+
+def get_property_data(properties):
+	
+	properties_dump={}
+	for p in properties:
+		
+		
+		if type(p)==list:
+			term=p[0]['term']
+			property_id=basic_search('properties',{'term':term})[0]['o:id']
+			prop_data=[]
+			for prop_entry in p:
+				prop_data.append(
+					format_property_data(
+						prop_entry['type'],
+						property_id,
+						prop_entry['value']
+					)
+				)
+		else:
+			term=p['term']
+			#print('-------',term)
+			property_id=basic_search('properties',{'term':term})[0]['o:id']
+			#print('+++++++',property_id)
+			
+			prop_data=[
+				format_property_data(
+					p['type'],
+					property_id,
+					p['value']
+				)
+			]
+		
+		#print(prop_data)
+		
+		properties_dump[term]=prop_data
+	return properties_dump
+
 
 def create_item(properties,item_class=''):
 	
 	#print(properties)
 	
-	properties_dump={}
-	for p in properties:
-		term=p[0]['term']
-		property_id=basic_search('properties',{'term':term})[0]['o:id']
-		
-		if type(p)==list:
-			prop_data=[]
-			for prop_entry in p:
-				prop_data.append({
-					"type": prop_entry['type'],
-					"property_id":property_id,
-					"@value":prop_entry['value']
-					})
-		else:
-			prop_data=[{
-				"type": p['type'],
-				"property_id":property_id,
-				"@value":p['value']
-				}]
-		
-		properties_dump[term]=prop_data
+	properties_dump=get_property_data(properties)
 
 	resource_class_id=basic_search('resource_classes',{'term':item_class})[0]['o:id']
 	
 	data = {
-	
-	
-	"@type": ["o:Item",item_class],
-	
-	"o:resource_class": 
-			{
-				"o:id": resource_class_id,
-				"@id": build_url(base_url,'resource_classes/%d' %resource_class_id)
-			}
+		"@type": ["o:Item",item_class],
+		"o:resource_class": 
+				{
+					"o:id": resource_class_id,
+					"@id": build_url(base_url,'resource_classes/%d' %resource_class_id)
+				}
 	}
 	
 	for p in properties_dump:
-		data[p]=properties_dump[p]
+		data[p]=properties_dump[p]	
 	
-	print(data)
+	#print(json.dumps(data,indent=1))
 	
 	headers = {
 	'Content-type': 'application/json'
 	}
 	url=build_url(base_url,'items')
-	print(json.dumps(data))
 	response = requests.post(url, params=omeka_credentials, data=json.dumps(data), headers=headers)
-	#print(response.text)
 	j = json.loads(response.text)
-	
-	#print(j)
-	
-	#print(j['o:id'])
+	#print(json.dumps(j,indent=1))
 	return j['o:id']
+	
