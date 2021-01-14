@@ -42,6 +42,7 @@ def omeka_get(api_path,args_dict,retrieve_all=False):
 	while True:
 		args_dict['page']=page
 		this_url=build_url(base_url,api_path,args_dict)
+		print(this_url)
 		response=requests.get(this_url,params=omeka_credentials)
 		headers=response.headers
 		j= json.loads(response.text)
@@ -72,6 +73,7 @@ def basic_search(resource_type,args_dict={},retrieve_all=True):
 #advanced search args allow for some clever filters
 #Right now it's super helpful for only grabbing items that have a specific property, which keeps me from having to iterate over all items looking for a value there
 #e.g. advanced_args=[{'property_id':98,'operator':'ex'}]
+#or advanced_args=[]
 def advanced_search(resource_type=None,args_dict={},advanced_args=[],retrieve_all=True):
 	
 	p=0
@@ -96,24 +98,47 @@ def advanced_search(resource_type=None,args_dict={},advanced_args=[],retrieve_al
 
 
 
+def upload_attachment(id,fname):
+	
+	data = {
+	"o:ingester": "upload", 
+    "file_index": "0", 
+    "o:item": {"o:id": id},
+    "dcterms:title": [{"type": "literal","property_id": 1,"property_label": "Title","@value": fname}]
+    }
+	files = [('data', (None, json.dumps(data), 'application/json')),('file[0]', (fname, open(fname,'rb'),'image'))]
+	response = requests.post('http://localhost/api/media', params=params, files=files)
+	print(id,fname)
+	print(response)
+	
+	
+	
+
 ##"properties" data is key/value pairs, where the key is always a 
 ## [{'term': 'bibo:identifier', 'type': 'literal', 'value': '8W2R7WF5'}]
 def update_item(properties,item_id):
 	print(properties,item_id)
 	item_data=basic_search('items',args_dict={'id':item_id},retrieve_all=False)[0]
-	'''print('----------')
-	print(item_data)
-	print('---------')'''
 	new_properties_data=get_property_data(properties)
 	headers = {
 	'Content-type': 'application/json'
 	}
 	this_url=build_url(base_url,'items',{'id':item_id})
-	d=json.dumps(new_properties_data)
+	
+	#print(json.dumps(new_properties_data,indent=1))
+	#print(json.dumps(item_data,indent=1))
+	print(item_data.keys())
+	print(new_properties_data.keys())
+	for d in new_properties_data:
+		if d in item_data:
+			item_data[d] = item_data[d]+new_properties_data[d]
+		else:
+			item_data[d]=new_properties_data[d]
+	d=json.dumps(item_data)
 	print(this_url)
-	json.loads(d)
-	print(omeka_credentials)
-	#print(d)
+	'''e=open('update.json','w')
+	e.write(json.dumps(item_data,indent=1))
+	e.close()'''
 	response = requests.patch(this_url, params=omeka_credentials, data=d, headers=headers)
 	print(response)
 
@@ -188,7 +213,7 @@ def create_item(properties,item_class=''):
 
 	resource_class_id=basic_search('resource_classes',{'term':item_class})[0]['o:id']
 	
-	data = {
+	item_data = {
 		"@type": ["o:Item",item_class],
 		"o:resource_class": 
 				{
@@ -198,16 +223,22 @@ def create_item(properties,item_class=''):
 	}
 	
 	for p in properties_dump:
-		data[p]=properties_dump[p]	
+		item_data[p]=properties_dump[p]	
 	
 	#print(json.dumps(data,indent=1))
 	
 	headers = {
 	'Content-type': 'application/json'
 	}
+	
 	url=build_url(base_url,'items')
-	response = requests.post(url, params=omeka_credentials, data=json.dumps(data), headers=headers)
+	response = requests.post(url, params=omeka_credentials, data=json.dumps(item_data), headers=headers)
 	j = json.loads(response.text)
-	#print(json.dumps(j,indent=1))
+	'''d=open("create.json",'w')
+	d.write(json.dumps(item_data,indent=1))
+	d.close()'''
 	return j['o:id']
 	
+'''if __name__=="__main__":
+	#create_item([{'term': 'dcterms:isPartOf', 'type': 'resource', 'value': 3758},{'term':'dcterms:title','type':'literal','value':'test'}])
+	update_item([{'term': 'dcterms:isPartOf', 'type': 'resource', 'value': 3750}], 3762)'''

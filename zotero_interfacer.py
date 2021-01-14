@@ -140,6 +140,18 @@ def zotero_format_items(items):
 				i['downloadlink']=item['links']['enclosure']['href']
 			except:
 				pass
+			try:
+				i['url']=item['data']['url']
+			except:
+				pass
+			try:
+				i['filename']=item['data']['filename']
+			except:
+				pass
+			try:
+				i['note']=item['data']['note']
+			except:
+				pass
 		else:
 			abstractNote=item['data']['abstractNote']
 			if abstractNote!='':
