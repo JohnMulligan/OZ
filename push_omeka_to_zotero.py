@@ -87,7 +87,7 @@ id_map={}
 c=0
 #create non-attachment items, while fetching along the way:
 ##omeka id's mapped to zotero id's
-for item in zotero_items_formatted:
+'''for item in zotero_items_formatted:
 	item_type=item['item_type']
 	#ignore attachment items
 	if item_type!='attachment':
@@ -100,7 +100,7 @@ for item in zotero_items_formatted:
 		omeka_id=O.create_item(item_properties,item_class)
 		id_map[zotero_id]=omeka_id
 		c+=1
-		print("created %d omeka_id=%d" %(c,omeka_id),"zotero id=",zotero_id)
+		print("created %d omeka_id=%d" %(c,omeka_id),"zotero id=",zotero_id)'''
 
 #handle attachment items
 attachment_items=[i for i in zotero_items_formatted if i['item_type']=='attachment']
@@ -136,7 +136,7 @@ for item in attachment_items:
 			item_properties=format_properties({i:i['url']})
 			omeka_id=O.update_item(item_properties,parent_item_omeka_id)	
 	else:
-		item_properties=format_properties({i:i['url']})
+		item_properties=format_properties({'url':item['url']})
 		omeka_id=O.update_item(item_properties,parent_item_omeka_id)
 
 #now create links between all items
@@ -145,10 +145,10 @@ for item in zotero_items_formatted:
 	if 'parentItem' in item.keys():
 		try:
 			advanced_args=[{'property_id':omeka_zotero_id_property_term_id,'operator':'eq','value':item['parentItem']}]
-			print(advanced_args)
+			#print(advanced_args)
 			parent_omeka_id=O.advanced_search('items',advanced_args=advanced_args)[0]['o:id']
 			advanced_args=[{'property_id':omeka_zotero_id_property_term_id,'operator':'eq','value':item['zotero_id']}]
-			print(advanced_args)
+			#print(advanced_args)
 			self_omeka_id=O.advanced_search('items',advanced_args=advanced_args)[0]['o:id']
 			print('linking',item['parentItem'],parent_omeka_id,'//to//',item['zotero_id'],self_omeka_id)
 			skipthis=False
