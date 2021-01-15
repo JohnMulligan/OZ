@@ -85,7 +85,7 @@ def format_properties(item,ignore_properties=[]):
 
 id_map={}
 c=0
-'''#create non-attachment items, while fetching along the way:
+#create non-attachment items, while fetching along the way:
 ##omeka id's mapped to zotero id's
 for item in zotero_items_formatted:
 	item_type=item['item_type']
@@ -137,7 +137,7 @@ for item in attachment_items:
 			omeka_id=O.update_item(item_properties,parent_item_omeka_id)	
 	else:
 		item_properties=format_properties({i:i['url']})
-		omeka_id=O.update_item(item_properties,parent_item_omeka_id)'''
+		omeka_id=O.update_item(item_properties,parent_item_omeka_id)
 
 #now create links between all items
 for item in zotero_items_formatted:
