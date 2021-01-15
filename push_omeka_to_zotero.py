@@ -49,7 +49,15 @@ parentOf_property_term='dcterms:hasPart'
 childOf_property_term='dcterms:isPartOf'
 
 
-
+#need this to fetch zotero attachment files
+d = open('zotero_credentials.json','r')
+t = d.read()
+d.close()
+j = json.loads(t)
+zotero_credentials = {
+    'key': j['Zotero-API-Key'],
+    'group': j['group']
+}
 
 
 
@@ -83,10 +91,7 @@ def format_properties(item,ignore_properties=[]):
 					}])
 	return(item_properties)
 
-id_map={}
-c=0
-#create non-attachment items, while fetching along the way:
-##omeka id's mapped to zotero id's
+#create non-attachment items
 for item in zotero_items_formatted:
 	item_type=item['item_type']
 	#ignore attachment items
@@ -102,7 +107,7 @@ for item in zotero_items_formatted:
 		c+=1
 		print("created %d omeka_id=%d" %(c,omeka_id),"zotero id=",zotero_id)
 
-#handle attachment items
+#upload attachments or create new attachment items
 attachment_items=[i for i in zotero_items_formatted if i['item_type']=='attachment']
 for item in attachment_items:
 	#all attachment items have properties we can look up, map, and format
@@ -127,7 +132,7 @@ for item in attachment_items:
 			dl=item['downloadlink']
 			fname=item['filename']
 			print("fetching file %s" %fname)
-			response=requests.get(dl,allow_redirects=True)
+			response=requests.get(dl,params=zotero_credentials,allow_redirects=True)
 			open(fname,'wb').write(response.content)
 			O.upload_attachment(parent_item_omeka_id,item_properties,fname)
 			os.remove(fname)
