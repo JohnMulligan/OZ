@@ -92,6 +92,7 @@ def format_properties(item,ignore_properties=[]):
 	return(item_properties)
 
 #create non-attachment items
+c=0
 for item in zotero_items_formatted:
 	item_type=item['item_type']
 	#ignore attachment items
