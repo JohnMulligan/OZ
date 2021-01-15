@@ -87,7 +87,7 @@ id_map={}
 c=0
 #create non-attachment items, while fetching along the way:
 ##omeka id's mapped to zotero id's
-'''for item in zotero_items_formatted:
+for item in zotero_items_formatted:
 	item_type=item['item_type']
 	#ignore attachment items
 	if item_type!='attachment':
@@ -100,7 +100,7 @@ c=0
 		omeka_id=O.create_item(item_properties,item_class)
 		id_map[zotero_id]=omeka_id
 		c+=1
-		print("created %d omeka_id=%d" %(c,omeka_id),"zotero id=",zotero_id)'''
+		print("created %d omeka_id=%d" %(c,omeka_id),"zotero id=",zotero_id)
 
 #handle attachment items
 attachment_items=[i for i in zotero_items_formatted if i['item_type']=='attachment']
@@ -133,7 +133,7 @@ for item in attachment_items:
 			os.remove(fname)
 		except:
 			print("^^ error -- download file not available ^^\n",item,'\n')
-			item_properties=format_properties({i:i['url']})
+			item_properties=format_properties({'url':item['url']})
 			omeka_id=O.update_item(item_properties,parent_item_omeka_id)	
 	else:
 		item_properties=format_properties({'url':item['url']})
