@@ -100,9 +100,9 @@ for item in zotero_items_formatted:
 		omeka_id=O.create_item(item_properties,item_class)
 		id_map[zotero_id]=omeka_id
 		c+=1
-		print("created %d omeka_id=%d" %(c,omeka_id),"zotero id=",zotero_id)'''
+		print("created %d omeka_id=%d" %(c,omeka_id),"zotero id=",zotero_id)
 
-'''#handle attachment items
+#handle attachment items
 attachment_items=[i for i in zotero_items_formatted if i['item_type']=='attachment']
 for item in attachment_items:
 	#all attachment items have properties we can look up, map, and format
