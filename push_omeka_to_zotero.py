@@ -102,7 +102,7 @@ for item in zotero_items_formatted:
 		c+=1
 		print("created %d omeka_id=%d" %(c,omeka_id),"zotero id=",zotero_id)'''
 
-#handle attachment items
+'''#handle attachment items
 attachment_items=[i for i in zotero_items_formatted if i['item_type']=='attachment']
 for item in attachment_items:
 	#all attachment items have properties we can look up, map, and format
@@ -137,15 +137,19 @@ for item in attachment_items:
 			omeka_id=O.update_item(item_properties,parent_item_omeka_id)	
 	else:
 		item_properties=format_properties({i:i['url']})
-		omeka_id=O.update_item(item_properties,parent_item_omeka_id)
+		omeka_id=O.update_item(item_properties,parent_item_omeka_id)'''
 
 #now create links between all items
 for item in zotero_items_formatted:
 	
 	if 'parentItem' in item.keys():
 		try:
-			parent_omeka_id=O.advanced_search('items',advanced_args=[{'property_id':omeka_zotero_id_property_term_id,'operator':'eq','value':item['parentItem']}])[0]['o:id']
-			self_omeka_id=parent_omeka_id=O.advanced_search('items',advanced_args=[{'property_id':omeka_zotero_id_property_term_id,'operator':'eq','value':item['zotero_id']}])[0]['o:id']
+			advanced_args=[{'property_id':omeka_zotero_id_property_term_id,'operator':'eq','value':item['parentItem']}]
+			print(advanced_args)
+			parent_omeka_id=O.advanced_search('items',advanced_args=advanced_args)[0]['o:id']
+			advanced_args=[{'property_id':omeka_zotero_id_property_term_id,'operator':'eq','value':item['zotero_id']}]
+			print(advanced_args)
+			self_omeka_id=O.advanced_search('items',advanced_args=advanced_args)[0]['o:id']
 			print('linking',item['parentItem'],parent_omeka_id,'//to//',item['zotero_id'],self_omeka_id)
 			skipthis=False
 		except:
