@@ -103,7 +103,6 @@ for item in zotero_items_formatted:
 		item_properties=format_properties(item,ignore_properties=['modified','item_type','parentItem','downloadlink'])
 		zotero_id=item['zotero_id']
 		omeka_id=O.create_item(item_properties,item_class)
-		id_map[zotero_id]=omeka_id
 		c+=1
 		print("created %d omeka_id=%d" %(c,omeka_id),"zotero id=",zotero_id)
 
