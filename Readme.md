@@ -25,7 +25,8 @@ Was trying to do this by mapping the rdf vocabs automatically but it turns out t
 
 This is what I was going to use for rdf ontology mapping in zotero_format_items:
 
-```url=build_url(api_url,args_dict={'format':'rdf_dc'})
+```
+url=build_url(api_url,args_dict={'format':'rdf_dc'})
 with urlopen(url) as f:
 	tree = etree.parse(f, parser)
 	for el in tree.iter():
