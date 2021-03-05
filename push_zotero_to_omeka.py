@@ -29,7 +29,7 @@ property_map={
 'citation':['dcterms:bibliographicCitation','literal'],
 'parentItem':['dcterms:isPartOf','resource'],
 'childItem':['dcterms:hasPart','resource'],
-'note':['acm5air:note','literal'],
+'note':['bibo:abstract','literal'],
 'filename':['dcterms:title','literal']
 }
 
@@ -90,6 +90,44 @@ def format_properties(item,ignore_properties=[]):
 						'value':item[prop]
 					}])
 	return(item_properties)
+
+print("number of items with summaries:",len(zotero_items_formatted))
+
+#consolidate non-attachment items
+summaries={}
+#first get all summaries
+for item in zotero_items_formatted:
+	item_type=item['item_type']
+	#ignore attachment items
+	if item_type!='attachment' and 'title' in item and re.fullmatch('summary',item['title'].strip().lower()):
+		z_id=item['zotero_id']
+		note=item['note']
+		parent_id=item['parentItem']
+		summaries[z_id]={'note':note,'parentItem':parent_id}
+#then purge them from the master list
+zotero_items_formatted=[i for i in zotero_items_formatted if i['zotero_id'] not in summaries]
+#then roll them into the master list via parent item abstracts
+for s_id in summaries:
+	s_text=summaries[s_id]['note']
+	s_parent_id=summaries[s_id]['parentItem']
+	z_parent=None
+	for z_item in zotero_items_formatted:
+		if s_parent_id==z_item['zotero_id']:
+			z_parent=z_item
+			print(s_parent_id,s_id)
+	if z_parent!=None:
+		zotero_items_formatted.remove(z_parent)
+		if 'note' in z_parent:
+			z_parent['note'].append(s_text)
+		else:
+			z_parent['note']=[s_text]
+		zotero_items_formatted.append(z_parent)
+		
+
+
+print("number of items after rolling up summaries",len(zotero_items_formatted))
+
+
 
 #create non-attachment items
 c=0
@@ -168,5 +206,4 @@ for item in zotero_items_formatted:
 			prop_term,prop_type=property_map['childItem']
 			parent_properties=[{'term':prop_term,'type':prop_type,'value':self_omeka_id}]
 			O.update_item(parent_properties,parent_omeka_id)
-		
 		

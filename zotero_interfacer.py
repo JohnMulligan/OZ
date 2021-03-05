@@ -122,11 +122,11 @@ def zotero_format_items(items):
 				title=paragraphs[0]
 				#handle short titles of lack of linebreaking
 				#which is rather common in zotero notes
-				if len(title)<=20:
+				if len(title)<=50:
 					i['title']=title
 					note='\n'.join(paragraphs[1:])
 				else:
-					i['title']=title[0:20]
+					i['title']=title[0:50]
 					note='\n'.join(paragraphs)
 
 				if note!='':
