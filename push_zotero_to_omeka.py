@@ -141,9 +141,9 @@ OZ_dict={o[omeka_zotero_id_property_term][0]['@value']:o['o:id'] for o in omeka_
 oz_items={o['o:id']:datetime.datetime.fromisoformat(o['o:modified']['@value']) for o in omeka_items + omeka_media}
 
 
-print(zotero_items_formatted)
+#print(zotero_items_formatted)
 
-print(oz_items)
+#print(oz_items)
 
 #create non-attachment items
 c=1
@@ -228,7 +228,7 @@ for item in zotero_items_formatted:
 			#print(advanced_args)
 			self_omeka_item=O.advanced_search('items',advanced_args=advanced_args)
 			self_omeka_id=self_omeka_item[0]['o:id']
-			print(self_omeka_item)
+			#print(self_omeka_item)
 			#get all links:
 			links=[]
 			for p in self_omeka_item[0]:
