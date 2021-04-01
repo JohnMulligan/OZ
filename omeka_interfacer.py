@@ -37,7 +37,6 @@ def omeka_get(api_path,args_dict,retrieve_all=False):
 	page=1
 	
 	all_results=[]
-	
 	while True:
 		args_dict['page']=page
 		this_url=build_url(base_url,api_path,args_dict)
@@ -57,6 +56,7 @@ def omeka_get(api_path,args_dict,retrieve_all=False):
 			break
 		if retrieve_all==False:
 			break
+		print('collected',len(all_results))
 	return all_results
 
 #retrieves json object for omeka classes,properties,or templates based on search parameters
@@ -120,7 +120,8 @@ def upload_attachment(item_id,properties,fname):
 
 ##"properties" data is key/value pairs, where the key is always a 
 ## [{'term': 'bibo:identifier', 'type': 'literal', 'value': '8W2R7WF5'}]
-def update_item(properties,item_id):
+## the two optional arguments here, keep_nonlinks and keep_links, allow you to overwrite (keep...=False) or append (keep...=True) existing data of different types
+def update_item(properties,item_id,keep_nonlinks=False,keep_links=True):
 	#print(properties,item_id)
 	item_data=basic_search('items',args_dict={'id':item_id},retrieve_all=False)[0]
 	new_properties_data=get_property_data(properties)
@@ -131,10 +132,21 @@ def update_item(properties,item_id):
 	#print(item_data.keys())
 	#print(new_properties_data.keys())
 	for d in new_properties_data:
-		if d in item_data:
-			item_data[d] = item_data[d]+new_properties_data[d]
-		else:
+		
+		if (keep_nonlinks==False and keep_links==False) or d not in item_data:
 			item_data[d]=new_properties_data[d]
+		
+		else:
+			rdfdata=[r for r in item_data[d] if 'type' in r]
+			#print(rdfdata)
+			for r in rdfdata:
+				if (r['type']=='resource' and keep_links==False) or (((r['type'] in ['literal','uri']) or 'numeric' in r['type']) and keep_nonlinks==False):
+					item_data[d].remove(r)
+			if type(item_data[d])==list:
+				item_data[d]+=new_properties_data[d]
+			else:
+				item_data[d]==new_properties_data[d]
+			
 	d=json.dumps(item_data)
 	response = requests.patch(this_url, params=omeka_credentials, data=d, headers=headers)
 	print(response)

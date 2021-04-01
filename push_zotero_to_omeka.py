@@ -99,13 +99,16 @@ summaries={}
 for item in zotero_items_formatted:
 	item_type=item['item_type']
 	#ignore attachment items
-	if item_type!='attachment' and 'title' in item and re.fullmatch('summary',item['title'].strip().lower()):
+	if item_type!='attachment' and 'title' in item and re.fullmatch('summary',re.sub('[,|.|:|;|-|!|?]+','',item['title'].strip().lower())):
 		z_id=item['zotero_id']
 		note=item['note']
 		parent_id=item['parentItem']
-		summaries[z_id]={'note':note,'parentItem':parent_id}
+		modified=item['modified']		
+		summaries[z_id]={'note':note,'parentItem':parent_id,'modified':modified}
+
 #then purge them from the master list
 zotero_items_formatted=[i for i in zotero_items_formatted if i['zotero_id'] not in summaries]
+
 #then roll them into the master list via parent item abstracts
 for s_id in summaries:
 	s_text=summaries[s_id]['note']
@@ -114,7 +117,7 @@ for s_id in summaries:
 	for z_item in zotero_items_formatted:
 		if s_parent_id==z_item['zotero_id']:
 			z_parent=z_item
-			print(s_parent_id,s_id)
+			#print(s_parent_id,s_id)
 	if z_parent!=None:
 		zotero_items_formatted.remove(z_parent)
 		if 'note' in z_parent:
@@ -123,14 +126,28 @@ for s_id in summaries:
 			z_parent['note']=[s_text]
 		zotero_items_formatted.append(z_parent)
 		
-
-
 print("number of items after rolling up summaries",len(zotero_items_formatted))
 
+# now get all Omeka items with bibo:identifier
+omeka_media=O.basic_search('items',retrieve_all=True)
+omeka_items=O.basic_search('media',retrieve_all=True)
 
+d=open('otmp.json','w')
+d.write(json.dumps(omeka_items))
+d.close()
+
+#odt=[{'zotero_id':o[omeka_zotero_id_property_term][0]['@value'],'omeka_id':o['o:id'],'modified':['o:modified']['@value']} for o in omeka_items if omeka_zotero_id_property_term in o]
+OZ_dict={o[omeka_zotero_id_property_term][0]['@value']:o['o:id'] for o in omeka_items + omeka_media if omeka_zotero_id_property_term in o}
+oz_items={o['o:id']:datetime.datetime.fromisoformat(o['o:modified']['@value']) for o in omeka_items + omeka_media}
+
+
+print(zotero_items_formatted)
+
+print(oz_items)
 
 #create non-attachment items
-c=0
+c=1
+d=1
 for item in zotero_items_formatted:
 	item_type=item['item_type']
 	#ignore attachment items
@@ -141,46 +158,63 @@ for item in zotero_items_formatted:
 			item_class=class_map['default_class']
 		item_properties=format_properties(item,ignore_properties=['modified','item_type','parentItem','downloadlink'])
 		zotero_id=item['zotero_id']
-		omeka_id=O.create_item(item_properties,item_class)
-		c+=1
-		print("created %d omeka_id=%d" %(c,omeka_id),"zotero id=",zotero_id)
+		if zotero_id in OZ_dict:
+			omeka_id=OZ_dict[zotero_id]
+			o_timestamp=oz_items[omeka_id]
+			z_timestamp=item['modified']
+			if o_timestamp < z_timestamp:
+				O.update_item(item_properties,omeka_id,keep_links=True,keep_nonlinks=False)
+				print('updated %d omeka_id=%d' %(d,omeka_id),"zotero id=",zotero_id)
+				d+=1
+			else:
+				print("not updating",omeka_id,zotero_id,"--omeka is fresher")
+		else:
+			omeka_id=O.create_item(item_properties,item_class)
+			print("created %d omeka_id=%d" %(c,omeka_id),"zotero id=",zotero_id)
+			c+=1
 
 #upload attachments or create new attachment items
 attachment_items=[i for i in zotero_items_formatted if i['item_type']=='attachment']
 for item in attachment_items:
 	#all attachment items have properties we can look up, map, and format
-	item_properties=format_properties(item,ignore_properties=['modified','item_type','parentItem','downloadlink','linkmode'])
-	#but some don't have parent items or have broken links to deleted parent items -- if so, create an item for the attachment
-	if 'parentItem' in item.keys():
-		print("\nattachment item",item['zotero_id'],"parent item",item['parentItem'])
-		parent_item_zotero_id=item['parentItem']
-		args_dict={'property_id':omeka_zotero_id_property_term_id,'operator':'eq','value':parent_item_zotero_id}
-		try:
-			parent_item_omeka_id=O.advanced_search('items',advanced_args=[args_dict],retrieve_all=False)[0]['o:id']
-		except:
-			print("^^ error -- parent item not found -- creating standalone item ^^\n")
-			parent_item_omeka_id=O.create_item(item_properties,class_map['default_class'])
-	else:
-		parent_item_omeka_id=O.create_item(item_properties,class_map['default_class'])
+	zotero_id=item['zotero_id']
 	
-	#next -- some so-called attachments are just links stored in a funky way.
-	#what's worse, some attached files have broken links
-	if item['linkmode']=='imported_file':
-		try:
-			dl=item['downloadlink']
-			fname=item['filename']
-			print("fetching file %s" %fname)
-			response=requests.get(dl,params=zotero_credentials,allow_redirects=True)
-			open(fname,'wb').write(response.content)
-			O.upload_attachment(parent_item_omeka_id,item_properties,fname)
-			os.remove(fname)
-		except:
-			print("^^ error -- download file not available ^^\n",item,'\n')
+	if zotero_id not in OZ_dict:
+	
+		item_properties=format_properties(item,ignore_properties=['modified','item_type','parentItem','downloadlink','linkmode'])
+		#but some don't have parent items or have broken links to deleted parent items -- if so, create an item for the attachment
+		if 'parentItem' in item.keys():
+			print("\nattachment item",item['zotero_id'],"parent item",item['parentItem'])
+			parent_item_zotero_id=item['parentItem']
+			args_dict={'property_id':omeka_zotero_id_property_term_id,'operator':'eq','value':parent_item_zotero_id}
+			try:
+				parent_item_omeka_id=O.advanced_search('items',advanced_args=[args_dict],retrieve_all=False)[0]['o:id']
+			except:
+				print("^^ error -- parent item not found -- creating standalone item ^^\n")
+				parent_item_omeka_id=O.create_item(item_properties,class_map['default_class'])
+		else:
+			parent_item_omeka_id=O.create_item(item_properties,class_map['default_class'])
+	
+		#next -- some so-called attachments are just links stored in a funky way.
+		#what's worse, some attached files have broken links
+		if item['linkmode']=='imported_file':
+			try:
+				dl=item['downloadlink']
+				fname=item['filename']
+				print("fetching file %s" %fname)
+				response=requests.get(dl,params=zotero_credentials,allow_redirects=True)
+				open(fname,'wb').write(response.content)
+				O.upload_attachment(parent_item_omeka_id,item_properties,fname)
+				os.remove(fname)
+			except:
+				print("^^ error -- download file not available ^^\n",item,'\n')
+				item_properties=format_properties({'url':item['url']})
+				omeka_id=O.update_item(item_properties,parent_item_omeka_id)	
+		else:
 			item_properties=format_properties({'url':item['url']})
-			omeka_id=O.update_item(item_properties,parent_item_omeka_id)	
+			omeka_id=O.update_item(item_properties,parent_item_omeka_id)
 	else:
-		item_properties=format_properties({'url':item['url']})
-		omeka_id=O.update_item(item_properties,parent_item_omeka_id)
+		print("item already uploaded. skipping:",zotero_id)
 
 #now create links between all items
 for item in zotero_items_formatted:
@@ -192,14 +226,33 @@ for item in zotero_items_formatted:
 			parent_omeka_id=O.advanced_search('items',advanced_args=advanced_args)[0]['o:id']
 			advanced_args=[{'property_id':omeka_zotero_id_property_term_id,'operator':'eq','value':item['zotero_id']}]
 			#print(advanced_args)
-			self_omeka_id=O.advanced_search('items',advanced_args=advanced_args)[0]['o:id']
-			print('linking',item['parentItem'],parent_omeka_id,'//to//',item['zotero_id'],self_omeka_id)
-			skipthis=False
+			self_omeka_item=O.advanced_search('items',advanced_args=advanced_args)
+			self_omeka_id=self_omeka_item[0]['o:id']
+			print(self_omeka_item)
+			#get all links:
+			links=[]
+			for p in self_omeka_item[0]:
+				if type(self_omeka_item[0][p])==list:
+					for si in self_omeka_item[0][p]:
+						try:
+							if si['type']=='resource':
+								links.append(si['value_resource_id'])
+						except:
+							pass
+			#print(links)
+			
+			if item['parentItem'] not in links:
+				print('linking',item['parentItem'],parent_omeka_id,'to',item['zotero_id'],self_omeka_id)
+				skipthis=False
+			else:
+				print('link already exists:',item['parentItem'],parent_omeka_id,'to',item['zotero_id'],self_omeka_id)
+				skipthis=True
 		except:
 			print("one of these does not exist in omeka:",item['parentItem'],item['zotero_id'])
 			skipthis=True
 		
 		if skipthis!=True:
+			
 			prop_term,prop_type=property_map['parentItem']
 			child_properties=[{'term':prop_term,'type':prop_type,'value':parent_omeka_id}]
 			O.update_item(child_properties,self_omeka_id)
