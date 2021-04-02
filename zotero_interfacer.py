@@ -3,7 +3,7 @@ import requests
 import urllib
 import re
 from bs4 import BeautifulSoup
-from datetime import date
+from datetime import datetime
 
 d = open('zotero_credentials.json','r')
 t = d.read()
@@ -107,7 +107,7 @@ def zotero_format_items(items):
 		i['url']=re.sub('//api.zotero.org','//www.zotero.org',item['links']['self']['href'])
 		item_type=item['data']['itemType']
 		i['item_type']=item_type
-		i['modified']=date.fromisoformat(item['data']['dateModified'][:-1]+'+00:00')
+		i['modified']=datetime.fromisoformat(item['data']['dateModified'][:-1]+'+00:00')
 		try:
 			i['parentItem']=item['data']['parentItem']
 		except:
