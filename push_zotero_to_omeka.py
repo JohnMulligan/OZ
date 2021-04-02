@@ -138,7 +138,7 @@ d.close()
 
 #odt=[{'zotero_id':o[omeka_zotero_id_property_term][0]['@value'],'omeka_id':o['o:id'],'modified':['o:modified']['@value']} for o in omeka_items if omeka_zotero_id_property_term in o]
 OZ_dict={o[omeka_zotero_id_property_term][0]['@value']:o['o:id'] for o in omeka_items + omeka_media if omeka_zotero_id_property_term in o}
-oz_items={o['o:id']:datetime.datetime.fromisoformat(o['o:modified']['@value']) for o in omeka_items + omeka_media}
+oz_items={o['o:id']:datetime.date.fromisoformat(o['o:modified']['@value']) for o in omeka_items + omeka_media}
 
 
 #print(zotero_items_formatted)
