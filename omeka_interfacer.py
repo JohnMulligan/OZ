@@ -40,7 +40,7 @@ def omeka_get(api_path,args_dict,retrieve_all=False):
 	while True:
 		args_dict['page']=page
 		this_url=build_url(base_url,api_path,args_dict)
-		#print(this_url)
+		print(this_url)
 		response=requests.get(this_url,params=omeka_credentials)
 		headers=response.headers
 		j= json.loads(response.text)
