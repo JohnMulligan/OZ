@@ -209,10 +209,10 @@ for item in attachment_items:
 			except:
 				print("^^ error -- download file not available ^^\n",item,'\n')
 				item_properties=format_properties({'url':item['url']})
-				omeka_id=O.update_item(item_properties,parent_item_omeka_id)	
+				omeka_id=O.update_item(item_properties,parent_item_omeka_id,keep_links=True,keep_nonlinks=True)	
 		else:
 			item_properties=format_properties({'url':item['url']})
-			omeka_id=O.update_item(item_properties,parent_item_omeka_id)
+			omeka_id=O.update_item(item_properties,parent_item_omeka_id,keep_links=True,keep_nonlinks=True)
 	else:
 		print("item already uploaded. skipping:",zotero_id)
 
@@ -255,8 +255,8 @@ for item in zotero_items_formatted:
 			
 			prop_term,prop_type=property_map['parentItem']
 			child_properties=[{'term':prop_term,'type':prop_type,'value':parent_omeka_id}]
-			O.update_item(child_properties,self_omeka_id)
+			O.update_item(child_properties,self_omeka_id,keep_links=True,keep_nonlinks=True)
 			prop_term,prop_type=property_map['childItem']
 			parent_properties=[{'term':prop_term,'type':prop_type,'value':self_omeka_id}]
-			O.update_item(parent_properties,parent_omeka_id)
+			O.update_item(parent_properties,parent_omeka_id,keep_links=True,keep_nonlinks=True)
 		
