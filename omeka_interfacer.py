@@ -121,12 +121,12 @@ def upload_attachment(item_id,properties,fname):
 ##"properties" data is key/value pairs, where the key is always a 
 ## [{'term': 'bibo:identifier', 'type': 'literal', 'value': '8W2R7WF5'}]
 ## the two optional arguments here, keep_nonlinks and keep_links, allow you to overwrite (keep...=False) or append (keep...=True) existing data of different types
-def update_item(properties,item_id,keep_nonlinks=False,keep_links=True):
+def update_item(properties,item_id,keep_nonlinks=False,keep_links=True,endpoint='items'):
 	#print(properties,item_id)
-	item_data=basic_search('items',args_dict={'id':item_id},retrieve_all=False)[0]
+	item_data=basic_search(endpoint,args_dict={'id':item_id},retrieve_all=False)[0]
 	new_properties_data=get_property_data(properties)
 	headers = {'Content-type': 'application/json'}
-	this_url=build_url(base_url,'items',{'id':item_id})
+	this_url=build_url(base_url,endpoint,{'id':item_id})
 	#print(json.dumps(new_properties_data,indent=1))
 	#print(json.dumps(item_data,indent=1))
 	#print(item_data.keys())
